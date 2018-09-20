@@ -3,12 +3,12 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>com.hlj.springboot.json</groupId>
-	<artifactId>springboot-json</artifactId>
+	<groupId>anno.json</groupId>
+	<artifactId>anno-json-filter-or-include</artifactId>
 	<version>0.0.1</version>
 	<packaging>jar</packaging>
 
-	<name>springboot-json</name>
+	<name>anno-json-filter-or-include</name>
 	<description>Demo project for Spring Boot</description>
 
 
