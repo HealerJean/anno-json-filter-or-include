@@ -23,7 +23,7 @@ public class HomeController {
 
     @GetMapping("responBean")
     @ResponseBody
-    @JSON(type =DemoEntity.class, include = "id")
+    @JSON(type =DemoEntity.class, include = "name")
     public ResponseBean jsonIgnore(){
         try {
             DemoEntity demoEntity = new DemoEntity().setId(1L).setName("healerjean").setBalance(24L);
@@ -63,7 +63,7 @@ public class HomeController {
 
     @GetMapping("jsonInclude/list")
     @ResponseBody
-    @JSON(type =DemoEntity.class, filter = "id")
+    @JSON(type =DemoEntity.class, include = "id")
     public List<DemoEntity> jsonIncludeList(){
         try {
             List<DemoEntity> demoEntityList  = new ArrayList<>();

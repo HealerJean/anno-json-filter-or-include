@@ -1,5 +1,7 @@
 package com.hlj.springboot.dome.anno.aop;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hlj.springboot.dome.anno.JsonAnnoSerializer;
 import com.hlj.springboot.dome.anno.JSON;
@@ -15,7 +17,6 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -26,6 +27,15 @@ import java.util.List;
 @Aspect
 @Component
 public class JsonInterceptor {
+
+    /**
+     * ObjectMapper
+     */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    static {
+        OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    }
+
 
     /**
      *
@@ -56,41 +66,21 @@ public class JsonInterceptor {
                  String innerJsonStr = jsonSerializer.toJson(responseBean.getResult());
                  Object jsonT = new JSONTokener(innerJsonStr).nextValue();
 
-                 if(jsonT instanceof JSONObject){
-                    JSONObject jsonObject = (JSONObject)jsonT;
-                    responseBean.setResult(new ObjectMapper().readValue(jsonObject.toString(),json.type()));
-                    return responseBean ;
-
-                 }else if (jsonT instanceof JSONArray) {
-                    JSONArray jsonArray = (JSONArray) jsonT;
-                    List objects = new ArrayList<>();
-                    for(int i = 0 ;i <jsonArray.size() ;i++){
-                        objects.add(new ObjectMapper().readValue(jsonArray.get(i).toString(),json.type()));
-                    }
-                    responseBean.setResult(objects);
-                    return responseBean ;
+                if(jsonT instanceof JSONObject){
+                       responseBean.setResult (OBJECT_MAPPER.readValue(innerJsonStr, json.type()));
+                }else if (jsonT instanceof JSONArray) {
+                       responseBean.setResult (OBJECT_MAPPER.readValue(innerJsonStr, new TypeReference<List>() { } ));
                 }
-
-
                 return  responseBean ;
             }
 
             //没有包装类
             String resultJson = jsonSerializer.toJson(object);
-
             Object jsonT = new JSONTokener(resultJson).nextValue();
             if(jsonT instanceof JSONObject){
-                JSONObject jsonObject = (JSONObject)jsonT;
-                return new ObjectMapper().readValue(jsonObject.toString(),json.type());
-
+                return OBJECT_MAPPER.readValue(resultJson, json.type());
             }else if (jsonT instanceof JSONArray) {
-                JSONArray jsonArray = (JSONArray) jsonT;
-
-                List objects = new ArrayList<>();
-                for(int i = 0 ;i <jsonArray.size() ;i++){
-                    objects.add(new ObjectMapper().readValue(jsonArray.get(i).toString(),json.type()));
-                }
-                return objects ;
+                return OBJECT_MAPPER.readValue(resultJson, new TypeReference<List>() { } );
             }
             return   object;
         } catch (Exception e) {

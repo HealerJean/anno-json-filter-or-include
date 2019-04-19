@@ -7,15 +7,10 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="anno-json-filter-or-include" />
-        <module name="springboot-json" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="anno-json-filter-or-include" target="1.8" />
-      <module name="springboot-json" target="1.8" />
     </bytecodeTargetLevel>
-  </component>
-  <component name="JavacSettings">
-    <option name="ADDITIONAL_OPTIONS_STRING" value="-encoding UTF8" />
   </component>
 </project>

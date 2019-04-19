@@ -1,5 +1,6 @@
 package com.hlj.springboot.dome.common.entity;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,6 +14,7 @@ import java.io.Serializable;
  */
 @Data
 @Accessors(chain = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class DemoEntity {
 
 	private Long id;
@@ -20,7 +22,5 @@ public class DemoEntity {
 	private String name;
 
 	private Long balance;
-
-
 
 }

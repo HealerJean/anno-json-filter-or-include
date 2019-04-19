@@ -1,4 +1,25 @@
+---
+title: 自定义注解实现Json字段过滤
+date: 2018-09-21 03:33:00
+tags: 
+- JSON
+category: 
+- JSON
+description: 自定义注解实现Json字段过滤
+---
+<!-- image url 
+https://raw.githubusercontent.com/HealerJean/HealerJean.github.io/master/blogImages
+　　首行缩进
+<font color="red">  </font>
+-->
+
 ### 自定义注解： JSON过滤字段
+
+1、使用[**@JsonInclude(JsonInclude.Include.NON_NULL)**]() 进行null值不给前台返回
+
+2、使用自定义注解讲有结果集的字段设置为null，这样就通过1 不给前台返回了
+
+
 
 
 #### 1、自定义注解
@@ -22,7 +43,7 @@ public @interface JSON {
 ```
 
 
-#### 2、自定义flterOrInclude
+#### 4、自定义flterOrInclude
 
 ``` 
 
@@ -81,9 +102,10 @@ public class JsonAnnoSerializer {
 #### 3、自定义Aop拦截
 
 ``` 
-
 package com.hlj.springboot.dome.anno.aop;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hlj.springboot.dome.anno.JsonAnnoSerializer;
 import com.hlj.springboot.dome.anno.JSON;
@@ -99,7 +121,6 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -110,6 +131,15 @@ import java.util.List;
 @Aspect
 @Component
 public class JsonInterceptor {
+
+    /**
+     * ObjectMapper
+     */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    static {
+        OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    }
+
 
     /**
      *
@@ -140,41 +170,21 @@ public class JsonInterceptor {
                  String innerJsonStr = jsonSerializer.toJson(responseBean.getResult());
                  Object jsonT = new JSONTokener(innerJsonStr).nextValue();
 
-                 if(jsonT instanceof JSONObject){
-                    JSONObject jsonObject = (JSONObject)jsonT;
-                    responseBean.setResult(new ObjectMapper().readValue(jsonObject.toString(),json.type()));
-                    return responseBean ;
-
-                 }else if (jsonT instanceof JSONArray) {
-                    JSONArray jsonArray = (JSONArray) jsonT;
-                    List objects = new ArrayList<>();
-                    for(int i = 0 ;i <jsonArray.size() ;i++){
-                        objects.add(new ObjectMapper().readValue(jsonArray.get(i).toString(),json.type()));
-                    }
-                    responseBean.setResult(objects);
-                    return responseBean ;
+                if(jsonT instanceof JSONObject){
+                       responseBean.setResult (OBJECT_MAPPER.readValue(innerJsonStr, json.type()));
+                }else if (jsonT instanceof JSONArray) {
+                       responseBean.setResult (OBJECT_MAPPER.readValue(innerJsonStr, new TypeReference<List>() { } ));
                 }
-
-
                 return  responseBean ;
             }
 
             //没有包装类
             String resultJson = jsonSerializer.toJson(object);
-
             Object jsonT = new JSONTokener(resultJson).nextValue();
             if(jsonT instanceof JSONObject){
-                JSONObject jsonObject = (JSONObject)jsonT;
-                return new ObjectMapper().readValue(jsonObject.toString(),json.type());
-
+                return OBJECT_MAPPER.readValue(resultJson, json.type());
             }else if (jsonT instanceof JSONArray) {
-                JSONArray jsonArray = (JSONArray) jsonT;
-
-                List objects = new ArrayList<>();
-                for(int i = 0 ;i <jsonArray.size() ;i++){
-                    objects.add(new ObjectMapper().readValue(jsonArray.get(i).toString(),json.type()));
-                }
-                return objects ;
+                return OBJECT_MAPPER.readValue(resultJson, new TypeReference<List>() { } );
             }
             return   object;
         } catch (Exception e) {
@@ -190,12 +200,54 @@ public class JsonInterceptor {
 
 #### 4、进行测试
 
+```java
+/**
+ * 测试实体类，这个随便;
+ */
+@Data
+@Accessors(chain = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class DemoEntity {
+
+	private Long id;
+
+	private String name;
+
+	private Long balance;
+
+}
 ```
+
+
+
+```
+
+package com.hlj.springboot.dome.common.moudle.controller;
+
+
+import com.hlj.springboot.dome.anno.JSON;
+import com.hlj.springboot.dome.common.data.ResponseBean;
+import com.hlj.springboot.dome.common.entity.DemoEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * @Description
+ * @Author HealerJean
+ * @Date 2018/3/22  上午10:22.
+ */
+@Controller
+public class HomeController {
+
 
 
     @GetMapping("responBean")
     @ResponseBody
-    @JSON(type =DemoEntity.class, include = "id")
+    @JSON(type =DemoEntity.class, include = "name")
     public ResponseBean jsonIgnore(){
         try {
             DemoEntity demoEntity = new DemoEntity().setId(1L).setName("healerjean").setBalance(24L);
@@ -235,7 +287,7 @@ public class JsonInterceptor {
 
     @GetMapping("jsonInclude/list")
     @ResponseBody
-    @JSON(type =DemoEntity.class, filter = "id")
+    @JSON(type =DemoEntity.class, include = "id")
     public List<DemoEntity> jsonIncludeList(){
         try {
             List<DemoEntity> demoEntityList  = new ArrayList<>();
@@ -250,74 +302,99 @@ public class JsonInterceptor {
     }
 
 
+
+}
+
+
 ```
 
 #### 5、浏览器访问
-[http://localhost:8080/responBean](http://localhost:8080/responBean)
-
-``` 
-{
-    "success": true,
-    "result": {
-        "id": 1,
-        "name": null,
-        "balance": null
-    },
-    "message": "",
-    "code": "200",
-    "date": "1537424885236"
-}
-
+```http
+http://localhost:8080/jsonFilter
 ```
 
 
-[http://localhost:8080/responBean/list](http://localhost:8080/responBean/list)
 
 ``` 
 {
-    "success": true,
-    "result": [
-        {
-            "id": null,
-            "name": "healerjean",
-            "balance": 24
-        },
-        {
-            "id": null,
-            "name": "healerjean",
-            "balance": 24
-        }
-    ],
-    "message": "",
-    "code": "200",
-    "date": "1537424921694"
-}
-```
-[http://localhost:8080/jsonFilter](http://localhost:8080/jsonFilter)
-
-``` 
-
-{
-    "id": null,
-    "name": "healerjean",
-    "balance": 24
+  "name": "healerjean",
+  "balance": 24
 }
 ```
 
-[http://localhost:8080/jsonInclude/list](http://localhost:8080/jsonInclude/list)
+```http
+http://localhost:8080/jsonInclude/list
+```
+
+
 
 ``` 
 [
+  {
+    "id": 1
+  },
+  {
+    "id": 1
+  }
+]
+```
+```http
+http://localhost:8080/responBean
+```
+
+
+
+``` 
+{
+  "success": true,
+  "result": {
+    "name": "healerjean"
+  },
+  "message": "",
+  "code": "200",
+  "date": "1555644132805"
+}
+```
+
+```http
+http://localhost:8080/responBean/list
+```
+
+
+
+``` 
+{
+  "success": true,
+  "result": [
     {
-        "id": null,
-        "name": "healerjean",
-        "balance": 24
+      "name": "healerjean",
+      "balance": 24
     },
     {
-        "id": null,
-        "name": "healerjean",
-        "balance": 24
+      "name": "healerjean",
+      "balance": 24
     }
-]
+  ],
+  "message": "",
+  "code": "200",
+  "date": "1555644151816"
+}
 
 ```
+
+
+## [ 代码下载](https://github.com/HealerJean/anno-json-filter-or-include.git)
+
+
+
+
+
+
+<br/><br/><br/>
+如果满意，请打赏博主任意金额，感兴趣的在微信转账的时候，添加博主微信哦， 请下方留言吧。可与博主自由讨论哦
+
+|支付包 | 微信|微信公众号|
+|:-------:|:-------:|:------:|
+|![支付宝](https://raw.githubusercontent.com/HealerJean/HealerJean.github.io/master/assets/img/tctip/alpay.jpg) | ![微信](https://raw.githubusercontent.com/HealerJean/HealerJean.github.io/master/assets/img/tctip/weixin.jpg)|![微信公众号](https://raw.githubusercontent.com/HealerJean/HealerJean.github.io/master/assets/img/my/qrcode_for_gh_a23c07a2da9e_258.jpg)|
+
+
